@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filledialog
+from tkinter import ttk, messagebox, filedialog
 from export_excel import exporter_resultats
 import math
 
@@ -32,6 +32,8 @@ diametres = [8, 10, 12, 14, 16, 20, 25, 32]
 
 
 def lancer_page_poteau(retour_accueil=None):
+
+    dernier_resultat = {}
 
     def calculer():
         type_section = combo_section.get()
@@ -217,29 +219,6 @@ def lancer_page_poteau(retour_accueil=None):
             texte_i = f"i_min = dimension_min / √12 = {i_min:.3f} m"
         else:
             texte_i = f"i = a / 4 = {i_min:.3f} m"
-
-        dernier_resultat.clear()
-
-        dernier_resultat.update({
-            "Type section": type_section,
-            "b (mm)": b_mm,
-            "h (mm)": h_mm,
-            "Ac (mm²)": Ac,
-            "lambda": lambd,
-            "NEd (kN)": NEd,
-            "fcd": fcd,
-            "fyd": fyd,
-            "NcRd (kN)": NcRd,
-            "As_calc (mm²)": As_calc,
-            "As_min (mm²)": As_min,
-            "As_max (mm²)": As_max,
-            "As_req (mm²)": As_req,
-            "Diametre HA": diametre,
-            "Nombre de barres": nb_barres,
-            "As_fournie (mm²)": As_fournie,
-            "NRd (kN)": NRd,
-            "Verification": verification
-        })
 
         texte = (
             f"ÉTAPE 1 : Conversion des dimensions\n"
