@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filledialog
 from export_excel import exporter_resultats
 import math
 
@@ -12,7 +12,15 @@ betons = {
     "C20/25": {"fck": 20},
     "C25/30": {"fck": 25},
     "C30/37": {"fck": 30},
-    "C35/45": {"fck": 35}
+    "C35/45": {"fck": 35},
+    "C40/50": {"fck": 40},
+    "C45/55": {"fck": 45},
+    "C50/60": {"fck": 50},
+    "C55/67": {"fck": 55},
+    "C60/75": {"fck": 60},
+    "C70/85": {"fck": 70},
+    "C80/95": {"fck": 80},
+    "C90/105": {"fck": 90}
 }
 
 aciers = {
@@ -24,8 +32,6 @@ diametres = [8, 10, 12, 14, 16, 20, 25, 32]
 
 
 def lancer_page_poteau(retour_accueil=None):
-
-    dernier_resultat = {}
 
     def calculer():
         type_section = combo_section.get()
@@ -145,7 +151,20 @@ def lancer_page_poteau(retour_accueil=None):
         fyd = fyk / 1.15
 
         # Étape 8 : résistance béton seul
-        NcRd = 0.85 * fcd * Ac / 1000
+        # Coefficient eta
+        if fck <= 50:
+            eta = 1.0
+        else:
+            eta = 1.0 - ((fck - 50) / 200)
+
+        # Coefficient lambda
+        if fck <= 50:
+            lambda_beton = 0.8
+        else:
+            lambda_beton = 0.8 - ((fck - 50) / 400)
+
+        # Résistance béton avec eta et lambda
+        NcRd = eta * lambda_beton * fcd * Ac / 1000
 
         # Étape 9 : section d'acier calculée
         if NEd > NcRd:
@@ -198,6 +217,30 @@ def lancer_page_poteau(retour_accueil=None):
             texte_i = f"i_min = dimension_min / √12 = {i_min:.3f} m"
         else:
             texte_i = f"i = a / 4 = {i_min:.3f} m"
+
+        dernier_resultat.clear()
+
+        dernier_resultat.update({
+            "Type section": type_section,
+            "b (mm)": b_mm,
+            "h (mm)": h_mm,
+            "Ac (mm²)": Ac,
+            "lambda": lambd,
+            "NEd (kN)": NEd,
+            "fcd": fcd,
+            "fyd": fyd,
+            "NcRd (kN)": NcRd,
+            "As_calc (mm²)": As_calc,
+            "As_min (mm²)": As_min,
+            "As_max (mm²)": As_max,
+            "As_req (mm²)": As_req,
+            "Diametre HA": diametre,
+            "Nombre de barres": nb_barres,
+            "As_fournie (mm²)": As_fournie,
+            "NRd (kN)": NRd,
+            "Verification": verification
+        })
+
         texte = (
             f"ÉTAPE 1 : Conversion des dimensions\n"
             f"b = {b_mm:.0f} mm\n"
@@ -222,7 +265,9 @@ def lancer_page_poteau(retour_accueil=None):
             f"fyd = fyk / 1.15 = {fyd:.2f} N/mm²\n\n"
 
             f"ÉTAPE 8 : Résistance du béton seul\n"
-            f"Nc,Rd = 0.85 × fcd × Ac = {NcRd:.2f} kN\n\n"
+            f"η = {eta:.3f}\n"
+            f"λ béton = {lambda_beton:.3f}\n"
+            f"Nc,Rd = η × λ × fcd × Ac = {NcRd:.2f} kN\n\n"
 
             f"ÉTAPE 9 : Section d'acier calculée\n"
             f"As_calc = {As_calc:.2f} mm²\n\n"
@@ -282,6 +327,32 @@ def lancer_page_poteau(retour_accueil=None):
     # Fonction réinitialiser
     # -----------------------------
 
+    def enregistrer_excel():
+
+        if not dernier_resultat:
+            messagebox.showerror(
+                "Erreur",
+                "Aucun résultat à exporter. Veuillez d'abord effectuer un calcul."
+            )
+            return
+
+        fichier = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Fichier Excel", "*.xlsx")],
+            title="Exporter les résultats"
+        )
+
+        if fichier:
+            exporter_resultats(
+                dernier_resultat,
+                "Résultats poteau",
+                fichier
+            )
+
+            messagebox.showinfo(
+                "Succès",
+                "Résultats exportés dans le fichier Excel."
+            )
 
     def reinitialiser():
         entry_b.delete(0, tk.END)
@@ -402,6 +473,14 @@ def lancer_page_poteau(retour_accueil=None):
 
     btn_reset = ttk.Button(frame_actions, text="Réinitialiser", command=reinitialiser)
     btn_reset.pack(side="left", padx=10, pady=10)
+
+    btn_export = ttk.Button(
+    frame_actions,
+    text="Exporter Excel",
+    command=enregistrer_excel
+    )
+
+    btn_export.pack(side="left", padx=10, pady=10)
 
 
     # -----------------------------
