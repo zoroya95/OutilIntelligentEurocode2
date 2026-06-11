@@ -1,13 +1,15 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
 from calcul_poteau import lancer_page_poteau
 from calcul_poutre import calculer_poutre, betons, aciers
 
+from export_excel import exporter_resultats
+
 
 def ouvrir_poteau(fenetre):
     fenetre.destroy()
-    lancer_page_poteau()
+    lancer_page_poteau(lancer_application)
 
 def ouvrir_poutre(fenetre):
     fenetre.destroy()
@@ -67,6 +69,27 @@ def ouvrir_poutre(fenetre):
     text_resultats.pack(side="left", fill="both", expand=True, padx=10, pady=10)
     scrollbar.pack(side="right", fill="y")
 
+    dernier_resultat = {}
+
+    def enregistrer_excel():
+        if not dernier_resultat:
+            messagebox.showerror("Erreur", "Aucun résultat à exporter. Veuillez d'abord calculer.")
+            return
+
+        fichier = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Fichier Excel", "*.xlsx")],
+            title="Exporter les résultats"
+        )
+
+        if fichier:
+            exporter_resultats(dernier_resultat, "Résultats poutre", fichier)
+            messagebox.showinfo("Succès", "Résultats exportés dans le fichier Excel.")
+
+    def retour():
+        page.destroy()
+        lancer_application()
+        
     def calculer():
         try:
             resultat = calculer_poutre(
@@ -79,6 +102,9 @@ def ouvrir_poutre(fenetre):
                 classe_acier=combo_acier.get(),
                 diametre=int(combo_diametre.get())
             )
+
+            dernier_resultat.clear()
+            dernier_resultat.update(resultat)
 
             if resultat["statut"] == "NON OK":
                 texte = (
@@ -126,6 +152,8 @@ def ouvrir_poutre(fenetre):
         except Exception as e:
             messagebox.showerror("Erreur", str(e))
 
+        
+
     def reinitialiser():
         entry_L.delete(0, tk.END)
         entry_h.delete(0, tk.END)
@@ -137,9 +165,30 @@ def ouvrir_poutre(fenetre):
         combo_diametre.current(2)
         text_resultats.delete("1.0", tk.END)
 
-    ttk.Button(frame_actions, text="Calculer", command=calculer).pack(side="left", padx=10, pady=10)
-    ttk.Button(frame_actions, text="Réinitialiser", command=reinitialiser).pack(side="left", padx=10, pady=10)
-
+    ttk.Button(
+        frame_actions, 
+        text="Calculer", 
+        command=calculer
+        ).pack(side="left", padx=10, pady=10)
+    
+    ttk.Button(
+        frame_actions, 
+        text="Réinitialiser", 
+        command=reinitialiser
+        ).pack(side="left", padx=10, pady=10)
+    
+    ttk.Button(
+        frame_actions, 
+        text="Retour accueil", 
+        command=retour
+        ).pack(side="left", padx=10, pady=10)
+    
+    ttk.Button(
+        frame_actions,
+        text="Exporter Excel",
+        command=enregistrer_excel
+        ).pack(side="left", padx=10, pady=10)
+    
     page.mainloop()
 
 
@@ -166,5 +215,7 @@ def lancer_application():
         text="Dimensionner une poutre",
         command=lambda: ouvrir_poutre(fenetre)
     ).pack(pady=10)
+
+    
 
     fenetre.mainloop()
