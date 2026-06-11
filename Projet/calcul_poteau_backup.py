@@ -1,0 +1,384 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import math
+
+
+# -----------------------------
+# Données matériaux
+# -----------------------------
+
+betons = {
+    "C20/25": {"fck": 20},
+    "C25/30": {"fck": 25},
+    "C30/37": {"fck": 30},
+    "C35/45": {"fck": 35}
+}
+
+aciers = {
+    "B400": {"fyk": 400},
+    "B500B": {"fyk": 500}
+}
+
+diametres = [8, 10, 12, 14, 16, 20, 25, 32]
+
+
+# -----------------------------
+# Fonction de calcul
+# -----------------------------
+
+def calculer():
+    try:
+        # Récupération des valeurs numériques
+        b = float(entry_b.get())
+        h = float(entry_h.get())
+        H = float(entry_H.get())
+        NG = float(entry_NG.get())
+        NQ = float(entry_NQ.get())
+
+    except ValueError:
+        messagebox.showerror(
+            "Erreur",
+            "Veuillez saisir des valeurs numériques valides pour b, h, H, NG et NQ."
+        )
+        return
+
+    # Récupération des listes déroulantes
+    classe_beton = combo_beton.get()
+    classe_acier = combo_acier.get()
+    diametre_texte = combo_diametre.get()
+
+    # Vérification des listes déroulantes
+    if classe_beton == "":
+        messagebox.showerror("Erreur", "Veuillez choisir une classe de béton.")
+        return
+
+    if classe_acier == "":
+        messagebox.showerror("Erreur", "Veuillez choisir une classe d'acier.")
+        return
+
+    if diametre_texte == "":
+        messagebox.showerror("Erreur", "Veuillez choisir un diamètre de barre.")
+        return
+
+    try:
+        diametre = int(diametre_texte)
+    except ValueError:
+        messagebox.showerror("Erreur", "Le diamètre choisi n'est pas valide.")
+        return
+
+    # Vérification des valeurs
+    if b <= 0 or h <= 0 or H <= 0:
+        messagebox.showerror(
+            "Erreur",
+            "Les dimensions b, h et H doivent être strictement positives."
+        )
+        return
+
+    if NG < 0 or NQ < 0:
+        messagebox.showerror(
+            "Erreur",
+            "Les charges NG et NQ ne doivent pas être négatives."
+        )
+        return
+    
+        # Vérification géométrique du poteau
+    grand_cote = max(b, h)
+    petit_cote = min(b, h)
+
+    if petit_cote < grand_cote / 4 or H < 3 * grand_cote:
+        messagebox.showerror(
+            "Erreur",
+            "Les dimensions ne permettent pas de considérer l'élément comme un poteau.\n"
+            "Il faut vérifier : b ≥ h/4 et H ≥ 3h."
+        )
+        return
+
+    # -----------------------------
+    # Calculs
+    # -----------------------------
+
+    fck = betons[classe_beton]["fck"]
+    fyk = aciers[classe_acier]["fyk"]
+
+    # Étape 1 : conversion en mm
+    b_mm = b * 1000
+    h_mm = h * 1000
+
+    # Étape 2 : aire de béton
+    Ac = b_mm * h_mm
+
+    # Étape 3 : rayon de giration minimal
+    dimension_min = min(b, h)
+    i_min = dimension_min / math.sqrt(12)
+
+    # Étape 4 : élancement
+    lambd = H / i_min
+
+    # Étape 5 : effort normal de calcul
+    NEd = 1.35 * NG + 1.50 * NQ
+
+    # Étape 6 : résistance béton
+    fcd = fck / 1.50
+
+    # Étape 7 : résistance acier
+    fyd = fyk / 1.15
+
+    # Étape 8 : résistance béton seul
+    NcRd = 0.85 * fcd * Ac / 1000
+
+    # Étape 9 : section d'acier calculée
+    if NEd > NcRd:
+        As_calc = (NEd - NcRd) * 1000 / fyd
+    else:
+        As_calc = 0
+
+    # Étape 10 : section minimale
+    As_min = 0.0034 * Ac
+
+    # Étape 11 : section requise
+    As_req = max(As_calc, As_min)
+
+    # Section maximale d'acier
+    As_max = 0.04 * Ac
+
+    if As_req > As_max:
+        messagebox.showerror(
+            "Erreur",
+            "La section d'acier requise dépasse As_max = 0.04 × Ac.\n"
+            "Il faut augmenter les dimensions du poteau ou la classe de béton."
+        )
+        return
+
+    # Étape 12 : choix des barres
+    aire_barre = math.pi * diametre**2 / 4
+    nb_barres = math.ceil(As_req / aire_barre)
+    As_fournie = nb_barres * aire_barre
+
+        # Armatures transversales
+    phi_long_max = diametre
+    phi_long_min = diametre
+
+    diametre_transversal_min = max(6, phi_long_max / 4)
+
+    b_mm_petit = petit_cote * 1000
+    scl_max = min(20 * phi_long_min, b_mm_petit, 400)
+
+    f"ARMATURES TRANSVERSALES\n"
+    f"Diamètre minimal des cadres = max(6 ; φlong/4) = {diametre_transversal_min:.2f} mm\n"
+    f"Espacement maximal scl,max = min(20φlong ; b ; 400) = {scl_max:.2f} mm\n\n"
+
+    # Étape 13 : vérification finale
+    NRd = (0.85 * fcd * Ac + As_fournie * fyd) / 1000
+
+    if NRd >= NEd:
+        verification = "OK : N_Rd ≥ N_Ed, le poteau est vérifié."
+    else:
+        verification = "NON OK : N_Rd < N_Ed, le poteau n'est pas vérifié."
+
+    # Affichage des résultats
+    texte = (
+        f"ÉTAPE 1 : Conversion des dimensions\n"
+        f"b = {b_mm:.0f} mm\n"
+        f"h = {h_mm:.0f} mm\n\n"
+
+        f"ÉTAPE 2 : Aire de béton\n"
+        f"Ac = b × h = {Ac:.0f} mm²\n\n"
+
+        f"ÉTAPE 3 : Rayon de giration minimal\n"
+        f"i_min = dimension_min / √12 = {i_min:.3f} m\n\n"
+
+        f"ÉTAPE 4 : Élancement\n"
+        f"λ = H / i_min = {lambd:.1f}\n\n"
+
+        f"ÉTAPE 5 : Effort normal de calcul\n"
+        f"N_Ed = 1.35 NG + 1.50 NQ = {NEd:.2f} kN\n\n"
+
+        f"ÉTAPE 6 : Résistance de calcul du béton\n"
+        f"fcd = fck / 1.50 = {fcd:.2f} N/mm²\n\n"
+
+        f"ÉTAPE 7 : Résistance de calcul de l'acier\n"
+        f"fyd = fyk / 1.15 = {fyd:.2f} N/mm²\n\n"
+
+        f"ÉTAPE 8 : Résistance du béton seul\n"
+        f"Nc,Rd = 0.85 × fcd × Ac = {NcRd:.2f} kN\n\n"
+
+        f"ÉTAPE 9 : Section d'acier calculée\n"
+        f"As_calc = {As_calc:.2f} mm²\n\n"
+
+        f"ÉTAPE 10 : Section minimale/maximale\n"
+        f"As_min = {As_min:.2f} mm²\n\n"
+        f"As_max = 0.04 × Ac = {As_max:.2f} mm²\n\n"
+
+        f"ÉTAPE 11 : Section requise\n"
+        f"As_req = max(As_calc ; As_min) = {As_req:.2f} mm²\n\n"
+
+        f"ÉTAPE 12 : Choix des barres\n"
+        f"Diamètre choisi : HA{diametre}\n"
+        f"Aire d'une barre = {aire_barre:.2f} mm²\n"
+        f"Nombre de barres = {nb_barres}\n"
+        f"As_fournie = {As_fournie:.2f} mm²\n\n"
+
+        f"ÉTAPE 13 : Vérification finale\n"
+        f"N_Rd = {NRd:.2f} kN\n"
+        f"N_Ed = {NEd:.2f} kN\n"
+        f"{verification}"
+    )
+
+    text_resultats.delete(1.0, tk.END)
+    text_resultats.insert(tk.END, texte)
+
+
+# -----------------------------
+# Fonction réinitialiser
+# -----------------------------
+
+def reinitialiser():
+    entry_b.delete(0, tk.END)
+    entry_h.delete(0, tk.END)
+    entry_H.delete(0, tk.END)
+    entry_NG.delete(0, tk.END)
+    entry_NQ.delete(0, tk.END)
+
+    combo_beton.current(1)      # C25/30
+    combo_acier.current(1)      # B500B
+    combo_diametre.current(1)   # HA10
+
+    text_resultats.delete("1.0", tk.END)
+
+
+# -----------------------------
+# Fenêtre principale
+# -----------------------------
+
+fenetre = tk.Tk()
+fenetre.title("Dimensionnement d'un poteau en béton armé")
+fenetre.geometry("800x800")
+
+
+# -----------------------------
+# Bloc données d'entrée
+# -----------------------------
+
+frame_entree = ttk.LabelFrame(fenetre, text="Données d'entrée")
+frame_entree.pack(fill="x", padx=10, pady=10)
+
+
+# -----------------------------
+# Zone géométrie
+# -----------------------------
+
+ttk.Label(
+    frame_entree,
+    text="Géométrie",
+    font=("Arial", 10, "bold")
+).grid(row=0, column=0, columnspan=2, pady=5)
+
+ttk.Label(frame_entree, text="Largeur b (m) :").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+entry_b = ttk.Entry(frame_entree)
+entry_b.grid(row=1, column=1, padx=5, pady=5)
+
+ttk.Label(frame_entree, text="Hauteur h (m) :").grid(row=2, column=0, sticky="w", padx=5, pady=5)
+entry_h = ttk.Entry(frame_entree)
+entry_h.grid(row=2, column=1, padx=5, pady=5)
+
+ttk.Label(frame_entree, text="Hauteur du poteau H (m) :").grid(row=3, column=0, sticky="w", padx=5, pady=5)
+entry_H = ttk.Entry(frame_entree)
+entry_H.grid(row=3, column=1, padx=5, pady=5)
+
+
+# -----------------------------
+# Zone matériaux
+# -----------------------------
+
+ttk.Label(
+    frame_entree,
+    text="Matériaux",
+    font=("Arial", 10, "bold")
+).grid(row=4, column=0, columnspan=2, pady=5)
+
+ttk.Label(frame_entree, text="Classe de béton :").grid(row=5, column=0, sticky="w", padx=5, pady=5)
+combo_beton = ttk.Combobox(frame_entree, values=list(betons.keys()), state="readonly")
+combo_beton.grid(row=5, column=1, padx=5, pady=5)
+combo_beton.current(1)
+
+ttk.Label(frame_entree, text="Classe d'acier :").grid(row=6, column=0, sticky="w", padx=5, pady=5)
+combo_acier = ttk.Combobox(frame_entree, values=list(aciers.keys()), state="readonly")
+combo_acier.grid(row=6, column=1, padx=5, pady=5)
+combo_acier.current(1)
+
+
+# -----------------------------
+# Zone chargements
+# -----------------------------
+
+ttk.Label(
+    frame_entree,
+    text="Chargements",
+    font=("Arial", 10, "bold")
+).grid(row=7, column=0, columnspan=2, pady=5)
+
+ttk.Label(frame_entree, text="Charge permanente NG (kN) :").grid(row=8, column=0, sticky="w", padx=5, pady=5)
+entry_NG = ttk.Entry(frame_entree)
+entry_NG.grid(row=8, column=1, padx=5, pady=5)
+
+ttk.Label(frame_entree, text="Charge d'exploitation NQ (kN) :").grid(row=9, column=0, sticky="w", padx=5, pady=5)
+entry_NQ = ttk.Entry(frame_entree)
+entry_NQ.grid(row=9, column=1, padx=5, pady=5)
+
+
+# -----------------------------
+# Zone choix des barres
+# -----------------------------
+
+ttk.Label(frame_entree, text="Diamètre des barres HA (mm) :").grid(row=10, column=0, sticky="w", padx=5, pady=5)
+
+combo_diametre = ttk.Combobox(frame_entree, values=diametres, state="readonly")
+combo_diametre.grid(row=10, column=1, padx=5, pady=5)
+combo_diametre.current(1)
+
+
+# -----------------------------
+# Bloc actions
+# -----------------------------
+
+frame_actions = ttk.LabelFrame(fenetre, text="Actions")
+frame_actions.pack(fill="x", padx=10, pady=10)
+
+btn_calculer = ttk.Button(frame_actions, text="Calculer", command=calculer)
+btn_calculer.pack(side="left", padx=10, pady=10)
+
+btn_reset = ttk.Button(frame_actions, text="Réinitialiser", command=reinitialiser)
+btn_reset.pack(side="left", padx=10, pady=10)
+
+
+# -----------------------------
+# Bloc résultats
+# -----------------------------
+
+frame_resultats = ttk.LabelFrame(fenetre, text="Résultats")
+frame_resultats.pack(fill="both", expand=True, padx=10, pady=10)
+
+text_resultats = tk.Text(
+    frame_resultats,
+    wrap="word",
+    font=("Arial", 10),
+    height=18
+)
+
+scrollbar = ttk.Scrollbar(
+    frame_resultats,
+    orient="vertical",
+    command=text_resultats.yview
+)
+
+text_resultats.configure(yscrollcommand=scrollbar.set)
+
+text_resultats.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+scrollbar.pack(side="right", fill="y")
+
+
+# -----------------------------
+# Lancement de l'application
+# -----------------------------
+
+fenetre.mainloop()
