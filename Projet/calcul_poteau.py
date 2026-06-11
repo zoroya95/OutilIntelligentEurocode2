@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filledialog
+from tkinter import ttk, messagebox, filedialog
 from export_excel import exporter_resultats
 import math
 
@@ -24,6 +24,8 @@ diametres = [8, 10, 12, 14, 16, 20, 25, 32]
 
 
 def lancer_page_poteau(retour_accueil=None):
+
+    dernier_resultat = {}
 
     def calculer():
         type_section = combo_section.get()
@@ -248,10 +250,32 @@ def lancer_page_poteau(retour_accueil=None):
             f"{verification}"
         )
 
+        dernier_resultat.clear()
+        dernier_resultat.update({
+            "statut":                 "OK",
+            "type_section":           type_section,
+            "b_mm":                   b_mm,
+            "h_mm":                   h_mm,
+            "H":                      H,
+            "NEd":                    NEd,
+            "fcd":                    fcd,
+            "fyd":                    fyd,
+            "Ac":                     Ac,
+            "nb_barres":              nb_barres,
+            "diametre":               diametre,
+            "As_fournie":             As_fournie,
+            "As_req":                 As_req,
+            "As_min":                 As_min,
+            "As_max":                 As_max,
+            "NRd":                    NRd,
+            "diametre_transversal_min": diametre_transversal_min,
+            "scl_max":                scl_max,
+        })
+
         text_resultats.delete(1.0, tk.END)
         text_resultats.insert(tk.END, texte)
 
-      
+
 
 
     # -----------------------------
@@ -404,11 +428,49 @@ def lancer_page_poteau(retour_accueil=None):
 
     text_resultats.pack(side="left", fill="both", expand=True, padx=10, pady=10)
     scrollbar.pack(side="right", fill="y")
+    def generer_dxf():
+        if not dernier_resultat or dernier_resultat.get("statut") != "OK":
+            messagebox.showwarning("Attention", "Veuillez d'abord effectuer un calcul valide.")
+            return
+
+        from tkinter import simpledialog
+        groupe = simpledialog.askinteger(
+            "Numéro du groupe", "Entrez le numéro du groupe :",
+            initialvalue=1, minvalue=1, maxvalue=99
+        )
+        if groupe is None:
+            return
+
+        nom_defaut = f"poteau_BA_groupe_{groupe:02d}.dxf"
+        nom_fichier = filedialog.asksaveasfilename(
+            defaultextension=".dxf",
+            filetypes=[("Fichier DXF", "*.dxf"), ("Tous les fichiers", "*.*")],
+            initialfile=nom_defaut,
+            title="Enregistrer le dessin DXF"
+        )
+        if not nom_fichier:
+            return
+
+        from dessin_dxf import generer_dessin_poteau
+        fichier, erreur = generer_dessin_poteau(dernier_resultat, groupe=groupe, nom_fichier=nom_fichier)
+
+        if erreur:
+            messagebox.showerror("Erreur DXF", erreur)
+        else:
+            messagebox.showinfo("Succès", f"Fichier DXF généré :\n{fichier}")
+
     def retour():
         fenetre.destroy()
 
         if retour_accueil:
             retour_accueil()
+
+    btn_generer_dxf = ttk.Button(
+        frame_actions,
+        text="Générer DXF",
+        command=generer_dxf
+    )
+    btn_generer_dxf.pack(side="left", padx=10, pady=10)
 
     btn_retour = ttk.Button(
         frame_actions,
