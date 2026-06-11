@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filledialog
+from export_excel import exporter_resultats
 import math
 
 
@@ -22,7 +23,7 @@ aciers = {
 diametres = [8, 10, 12, 14, 16, 20, 25, 32]
 
 
-def lancer_page_poteau():
+def lancer_page_poteau(retour_accueil=None):
 
     def calculer():
         type_section = combo_section.get()
@@ -250,6 +251,8 @@ def lancer_page_poteau():
         text_resultats.delete(1.0, tk.END)
         text_resultats.insert(tk.END, texte)
 
+      
+
 
     # -----------------------------
     # Fonction réinitialiser
@@ -401,4 +404,17 @@ def lancer_page_poteau():
 
     text_resultats.pack(side="left", fill="both", expand=True, padx=10, pady=10)
     scrollbar.pack(side="right", fill="y")
+    def retour():
+        fenetre.destroy()
+
+        if retour_accueil:
+            retour_accueil()
+
+    btn_retour = ttk.Button(
+        frame_actions,
+        text="Retour accueil",
+        command=retour
+    )
+
+    btn_retour.pack(side="left", padx=10, pady=10)
     fenetre.mainloop()
