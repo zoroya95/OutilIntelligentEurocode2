@@ -77,12 +77,12 @@ Champ                      | Unite  | Exemple
 Type de section            | -      | Rectangulaire
 Largeur b / diametre a     | m      | 0.30
 Hauteur h                  | m      | 0.30
-Hauteur du poteau H        | m      | 3.5
-Charge permanente NG       | kN     | 400
-Charge exploitation NQ     | kN     | 150
+Hauteur du poteau H        | m      | 3.2
+Charge permanente NG       | kN     | 350
+Charge exploitation NQ     | kN     | 600
 Classe de beton            | -      | C25/30
 Classe d'acier             | -      | B500B
-Diametre des barres HA     | mm     | 16
+Diametre des barres HA     | mm     | 10
 
 Apres saisie, cliquez sur "Calculer" pour obtenir :
   - NEd, fcd, fyd
@@ -168,12 +168,7 @@ Limites du dessin DXF :
   - Le dessin est genere a l'echelle 1:1 en mm
   - Les armatures sont representees de facon
     schematique (pas de crochets ni de facades reels)
-  - Les cotations sont manuelles (pas de style
-    AutoCAD configurable depuis Python)
 
-Pour une etude structurelle complete, consulter
-un bureau d'etudes agree et utiliser un logiciel
-professionnel (Robot Structural, EFFEL, etc.).
 
 
 --------------------------------------------------------
